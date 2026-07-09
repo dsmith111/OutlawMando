@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts / binaries (never commit)
+*.dll
+*.pdb
+*.lib
+*.exe
+*.obj
+*.o
+
+# Proprietary / redistributable binaries (obtain separately)
+# - oo2core_*_win64.dll (Oodle)  - dstoragecore.dll (DirectStorage impl)
+redist/
+**/redist/
+
+# Ripped game assets / local working data (kept out of git)
+local/
+extracted/
+baseline/
+*.sdfdata
+*.mmb
+
+# Logs / captures
+*.log
+dstorage_proxy.log
+
+# OS cruft
+.DS_Store
+Thumbs.db

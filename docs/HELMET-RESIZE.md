@@ -1,8 +1,30 @@
-# The helmet-resize experiment: DirectStorage, Oodle, and an honest dead-end
+# The helmet-resize experiment: DirectStorage, Oodle, and (finally) Raindrop
 
-Goal: shrink the oversized Boba helmet ~15% toward Din Djarin proportions. This is the story of
-why that turned into a deep dive into Snowdrop's streaming pipeline, what got unlocked, and why
-the resize itself is blocked.
+Goal: shrink the oversized Boba helmet toward Din Djarin proportions.
+
+## RESOLVED — it works via Raindrop
+The resize **works** using **Raindrop** (DTZxPorter's `dinput8.dll` loader), which — unlike the
+Universal Snowdrop Modloader (`version.dll`) — *does* serve loose `.mmb` mesh overrides. The
+whole DirectStorage/Oodle detour below was chasing the wrong loader. Working setup:
+- Disable `version.dll`; install Raindrop `dinput8.dll` in the game root.
+- Drop the scaled helmet `.mmb` (from `tools/scale_helmet.py`, now supporting per-axis
+  `sx,sy,sz`) at its real path; Raindrop serves it, and it serves the recolor materials too.
+- The helmet is same-length-edited, so no re-encoding/DirectStorage is needed at all.
+
+Two follow-on fitment facts:
+- The player head clips through a shrunk helmet. The head (`chr_head_2_silver_human_sea_m_001`,
+  a per-outfit head swapped in by the visuals file) **can't be shrunk** — its `head_mesh` uses
+  **PCA-compressed** positions. So it's **hidden** with a zero-byte `.mgraphobject` override
+  (the same trick the base mod uses for gear). Leaves a tiny throat gap, normally collar-covered.
+- Final shipped shape is a non-uniform scale (narrower width, near-full height/depth) — a
+  Mando-ish silhouette rather than a uniform shrink.
+
+Everything below is the (still interesting) record of the detour before Raindrop was found.
+
+---
+
+The rest of this doc is the story of why this first turned into a deep dive into Snowdrop's
+streaming pipeline, what got unlocked, and why the *DirectStorage* route was blocked.
 
 ## 1. Loose meshes are ignored
 A loose `.mmb` mesh override placed at the correct `helix/…` path loads but has **no effect** —

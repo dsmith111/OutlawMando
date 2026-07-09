@@ -6,10 +6,10 @@ green/red metal — and, along the way, a reusable toolkit for reverse-engineeri
 Snowdrop's file formats on Linux.
 
 > **Status:** The color mod is finished and shippable (see [`mod-src/`](mod-src/) and the
-> `nexus/` bundles). A helmet-resize experiment led deep into Snowdrop's asset pipeline and
-> uncovered a genuinely novel capability (re-enabling + intercepting DirectStorage), but the
-> resize itself is **blocked** by an undocumented mesh format — documented honestly in
-> [`docs/HELMET-RESIZE.md`](docs/HELMET-RESIZE.md).
+> `nexus/` bundles). The **helmet resize also works** — via the Raindrop loader, which serves
+> loose `.mmb` mesh overrides (the earlier DirectStorage detour was chasing the wrong loader).
+> The full story, including the genuinely novel DirectStorage-intercept capability that came
+> out of it, is in [`docs/HELMET-RESIZE.md`](docs/HELMET-RESIZE.md).
 
 ## What's here
 

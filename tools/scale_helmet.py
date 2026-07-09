@@ -48,6 +48,12 @@ def clamp_i16(i):
 
 
 def scale_mmb(inpath, outpath, scale=0.85):
+    # scale may be a float (uniform) or an (sx, sy, sz) tuple:
+    #   X = width (left/right), Y = height (up), Z = depth (front/back)
+    if isinstance(scale, (int, float)):
+        sx = sy = sz = float(scale)
+    else:
+        sx, sy, sz = scale
     buf = bytearray(open(inpath, 'rb').read())
     path = inpath
     sys.modules["bpy"].context.scene.SWOMT.AssetPath = path
@@ -70,9 +76,9 @@ def scale_mmb(inpath, outpath, scale=0.85):
                 if ptype == 0:
                     xn, yn, zn, w = struct.unpack_from('<hhhh', buf, b)
                     px = xn / 32767.0 * w; py = yn / 32767.0 * w; pz = zn / 32767.0 * w
-                    px = cx + scale * (px - cx)
-                    py = cy + scale * (py - cy)
-                    pz = cz + scale * (pz - cz)
+                    px = cx + sx * (px - cx)
+                    py = cy + sy * (py - cy)
+                    pz = cz + sz * (pz - cz)
                     if w != 0:
                         nxn = clamp_i16(round(px / w * 32767))
                         nyn = clamp_i16(round(py / w * 32767))
@@ -80,7 +86,7 @@ def scale_mmb(inpath, outpath, scale=0.85):
                         struct.pack_into('<hhh', buf, b, nxn, nyn, nzn)  # keep w at b+6
                 else:
                     x, y, z = struct.unpack_from('<fff', buf, b)
-                    x = cx + scale * (x - cx); y = cy + scale * (y - cy); z = cz + scale * (z - cz)
+                    x = cx + sx * (x - cx); y = cy + sy * (y - cy); z = cz + sz * (z - cz)
                     struct.pack_into('<fff', buf, b, x, y, z)
                 total_v += 1
     assert len(buf) == os.path.getsize(inpath), "length changed!"
@@ -91,5 +97,6 @@ def scale_mmb(inpath, outpath, scale=0.85):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(__doc__); sys.exit(1)
-    scale = float(sys.argv[3]) if len(sys.argv) > 3 else 0.85
+    arg = sys.argv[3] if len(sys.argv) > 3 else "0.85"
+    scale = tuple(float(x) for x in arg.split(",")) if "," in arg else float(arg)
     scale_mmb(sys.argv[1], sys.argv[2], scale)

@@ -1,6 +1,6 @@
 # OutlawMando — Mandalorian Beskar recolor + a Snowdrop/DirectStorage mod toolkit
 
-Turn the "Play as Boba Fett" mod for **Star Wars Outlaws** (Snowdrop engine) into clean,
+Turns the Boba Fett gear in **Star Wars Outlaws** (Snowdrop engine) into clean,
 screen-accurate **Mandalorian beskar** — cool silver armor instead of Boba's dark weathered
 green/red metal — and, along the way, a reusable toolkit for reverse-engineering and modding
 Snowdrop's file formats on Linux.

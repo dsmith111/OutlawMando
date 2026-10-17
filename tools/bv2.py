@@ -197,9 +197,15 @@ class BV2:
 def _selftest():
     import os
     here = os.path.dirname(os.path.abspath(__file__))
-    ref = os.path.join(here, "..", "helix", "materials",
-                       "mat_chr_botm_5_canon_boba_fett_boots_metal.mmaterial.orig")
-    ref = os.path.normpath(ref)
+    fn = "mat_chr_botm_5_canon_boba_fett_boots_metal.mmaterial.orig"
+    # The reference .orig lives under local/helix/materials (workspace), not repo/helix.
+    # Try both known locations; skip cleanly if neither is present (fresh clone has no game data).
+    candidates = [os.path.normpath(os.path.join(here, "..", "..", "local", "helix", "materials", fn)),
+                  os.path.normpath(os.path.join(here, "..", "helix", "materials", fn))]
+    ref = next((p for p in candidates if os.path.exists(p)), None)
+    if ref is None:
+        print("[skip] reference material not found (looked in %s)" % candidates)
+        return
     raw = open(ref, "rb").read()
     m = BV2.parse(raw)
 

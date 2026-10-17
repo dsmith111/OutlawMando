@@ -19,6 +19,27 @@ Two follow-on fitment facts:
 - Final shipped shape is a non-uniform scale (narrower width, near-full height/depth) — a
   Mando-ish silhouette rather than a uniform shrink.
 
+### v1.2 packaging fix: bald head/nose clipping
+
+The working game install contains this **zero-byte file**:
+`helix/graph objects/gear/chr_head_2_silver_human_sea_m_001.mgraphobject`.
+It hides the head by overriding its graph; merely omitting a loose head mesh does not hide
+the head asset in the game's archives.
+
+The shipped `MandalorianBeskar_v1.1.zip` omitted this override even though it included the
+smaller helmet. All 43 assets in that archive match the working install byte-for-byte;
+the head-hide graph is a separate, required override that the build script never copied.
+This explains why the developer install worked while users saw the bald head and nose.
+
+The v1.2 build explicitly generates the empty graph and checks that it is present and
+exactly zero bytes. This is the only graph override the add-on ships; the base mod's
+character visuals and other gear-hiding graphs remain dependencies. Keep empty files
+when archiving or installing the mod.
+
+Deleting `chr_headw_5_canon_boba_fett_helmet.mmb` removes the smaller Din helmet override
+and lets the game fall back to Boba's larger helmet. That can mask the clipping, but loses
+the custom shape. Install v1.2 over v1.1 to restore the helmet and add the missing graph.
+
 Everything below is the (still interesting) record of the detour before Raindrop was found.
 
 ---

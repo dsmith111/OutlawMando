@@ -3,9 +3,9 @@
 An add-on for the **"Play as Boba Fett"** mod for **Star Wars Outlaws** (Snowdrop engine) that turns
 the outfit into Din Djarin, and the Linux-side toolkit built to make it.
 
-- **v2.x (current):** a full Din Djarin character model replaces the Boba Fett geometry. The model
+- **v2.x (current, 2.2):** a full Din Djarin character model replaces the Boba Fett geometry. The model
   is cut into the outfit's gear pieces, refitted to the game skeleton, re-skinned and re-textured,
-  and given a cloth-simulated back cape. See [`docs/DIN-SWAP.md`](docs/DIN-SWAP.md) and
+  and given a free-flowing cloth cape; the outfit hides in first person and the grapple rope works. See [`docs/DIN-SWAP.md`](docs/DIN-SWAP.md) and
   [`tools/din_swap/`](tools/din_swap/).
 - **v1.x (older):** a material reskin of the Boba outfit (chrome beskar plus a reshaped helmet).
   The record is in [`docs/HELMET-RESIZE.md`](docs/HELMET-RESIZE.md) and [`docs/FINDINGS.md`](docs/FINDINGS.md).
@@ -41,6 +41,12 @@ The release archive is `helix/` plus `README.txt`; install it over the Boba mod.
   plain text) instead. To hide or change a part of one character, edit that character's gear list.
 - The borrowed cape still overrides the Canto Bight police cape's own files, so those NPCs share its
   colour and cloth settings.
+- **Check a value's meaning against known-good files before tuning it.** Five cape revisions raised a
+  cloth table read as "max distance"; it was each particle's collision radius, and raising it produced
+  the very artefact being chased. Three reference cloth files settled it in minutes.
+- **Player gear has wiring NPC gear lacks.** Kay's gear takes its visibility from a first-person signal
+  and her accessories carry the grapple rope's joints; an outfit built from NPC gear graphs needs both
+  put back.
 
 ## License
 

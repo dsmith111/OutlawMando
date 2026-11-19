@@ -19,6 +19,7 @@ for l in sys.stdin:
 echo "== meshes";    python3 -I build_din.py "${FITARGS[@]}" | sed 's/^/   /' | cut -c1-150
 echo "== materials"; python3 build_materials.py | grep -c '^mat_' | sed 's/^/   materials written: /'
 echo "== cape (borrowed Canto police cape)"; python3 build_cape.py "${CAPEARGS[@]}"
+echo "== gear graphs (first-person hide, grapple-rope joints)"; python3 build_graphs.py
 echo "== validate"
 python3 validate_all.py
 echo "staging tree: $ROOT/local/din_swap/staging   (previews: python3 -I preview_build.py body ; python3 -I pose_test.py)"

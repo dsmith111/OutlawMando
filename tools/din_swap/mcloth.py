@@ -13,9 +13,17 @@ What is decoded (type-0x11 chunks of a "<sim mesh>_Cloth0_LODn" section; N = par
   id 178  u32 (N / 16, 9)      batches, number of per-particle channel slots
   id 180  9 x (u32 batches, float step, float min, float max)   one slot per channel; unused slots all zero
   id 179  N x u8 per used slot  quantised channel: value = min + byte * step
-          slot 2 = MAX DISTANCE in metres: how far the particle may stray from its animated (skinned)
-          position. Canto police cape: exactly sim-mesh red / 255 * 0.4 -> 0 .. 3.9 cm (red capped at 25);
-          Lando's seated cape: 1 .. 3 cm from a separate map. Padding entries are 255.
+          slot 2 = the particle's COLLISION RADIUS in metres (cloth thickness against the collision
+          capsules). Canto police cape 0 .. 3.9 cm (sim-mesh red / 255 * 0.4), Boba poncho 0 .. 5 cm,
+          Vader 2 .. 7.4 cm, Lando 1 .. 5 cm - all free-flowing capes, so this is NOT a leash (it was
+          first read as "max distance"; max_distance() below still carries that name). Raising it
+          to 40 cm made the lower cape keep 40 cm away from the body. Padding entries are 255.
+  ids 12 / 13 / 14   constraint tables: id 12 = six batch counts, id 14 = six (step, lo, hi), id 13 = bytes
+          range 0-2 per-edge spring rest lengths
+          range 3   BACKSTOP: how far (negative metres) a particle may go inside its animated pose
+                    (Canto 0 .. -17 cm, Lando 0 .. -23 cm, Vader 0 .. -36 cm; the poncho has none)
+          range 4   max distance from the animated pose (only Lando: 0 .. 26 cm)
+          range 5   tether length
 The same tables are repeated, identical, in every sim LOD section.
 
 Simulation settings ("states"; the solver is Ubisoft's SMotion — step names in the exe: InjectAnim,
@@ -24,14 +32,17 @@ ApplyCollisionConstraints, BlendInAnimation). A section holds one default settin
 state (id 82 = state count: Canto 1, Lando seated 3 — picked by the gear graph's ClothPreset/presetId).
 A block = id 5 (149 B packed struct) followed by the same values as separate chunks (46 gravity,
 7 flags, 8 five floats, 45, 47-49, 44, 26, 43, 78):
-  id 5 +0   u8 limit mode: 2 where the slot-2 limit is in force (Canto; Lando's seated state), 0 in Lando's free states
+  id 5 +0   u8 mode: 2 Canto / Lando, 1 Boba poncho / Vader, 0 in the two special states of Lando's seated cape
        +2   float3 gravity
        +14  float  (authored: Canto 0.1, Lando 0 / 0.03 — damping?)
-       +26  float  LIMIT RADIUS = max of the slot-2 table (Canto 0.0392157, Lando seated 0.03).
-                   Patching the table alone (rev 8) changed nothing in game; this header value must
-                   be raised with it (rev 9).
+       +26  float  maximum of the slot-2 table = largest collision radius (Canto 0.0392, poncho / Lando
+                   0.05, Vader 0.074). A table value above it has no effect.
+       +125 float  0.7 and +133 float 0.1 on the Canto cape only, 0 in every other cape (friction?)
+       +1, +94, +99 = 1, chunk 43 byte 0 = 1, chunk 45 byte 0 = 1 in every normal cape (body collision
+                   and body-relative frame); all 0 in the special states of Lando's seated cape, where
+                   the cloth ignores the body (seen in game)
        +35  float  1.05 Canto / 1.19-2.0 Lando (max-length stretch?)   +95 float time step (1/30, 1/60)
-Hero-cape states (Lando) additionally carry a per-state table id 84/86/89 = red/255*0.4 (0..0.40 m).
+The states of Lando's seated cape additionally carry a per-state table id 84/86/89 (0..0.40 m).
 """
 import struct, sys
 import numpy as np
@@ -79,13 +90,13 @@ MAXDIST_SLOT = 2
 
 
 def max_distance(buf, cs):
-    """Per-particle max-distance table of one sim section.
+    """Per-particle slot-2 table of one sim section (the COLLISION RADIUS - historically misnamed, see above).
     -> dict(n, pos (N,3), dist (N,) metres, byte_off, slot_off, batches, step, lo, hi)"""
     d = typed(buf, cs)
     n = struct.unpack_from("<I", buf, d[2][0][0])[0]
     batches, nslots = struct.unpack_from("<2I", buf, d[178][0][0])
     bo, nb = d[179][0]; so, ns = d[180][0]
-    assert ns == nslots * 16 and nb == batches * 16, "expected exactly one stored channel (max distance)"
+    assert ns == nslots * 16 and nb == batches * 16, "expected exactly one stored channel (collision radius)"
     used = [i for i in range(nslots) if any(buf[so + i * 16:so + i * 16 + 16])]
     assert used == [MAXDIST_SLOT], used
     cnt, step, lo, hi = struct.unpack_from("<I3f", buf, so + MAXDIST_SLOT * 16)
@@ -102,19 +113,29 @@ def settings_blocks(buf, cs):
     return [po for po, n in typed(buf, cs).get(5, []) if n == 149]
 
 
-LIMIT_OFF = 26      # float in the packed settings struct: limit radius (= max of the max-distance table)
+LIMIT_OFF = 26      # float in the packed settings struct: the largest collision radius (max of the slot-2 table)
 
 
-def set_max_distance(buf, t, dist):
-    """Write a new per-particle max distance (metres, first t['n'] particles) into a bytearray, in place.
-    Requantised to 0..hi over 255 steps; pinned particles (0) stay exactly 0; padding entries stay 255."""
-    n = t["n"]; dist = np.asarray(dist, np.float64)[:n]
-    assert (dist >= 0).all()
-    hi = float(dist.max()); step = hi / 255.0
-    q = np.clip(np.rint(dist / step), 0, 255).astype(np.uint8)
-    buf[t["byte_off"]:t["byte_off"] + n] = q.tobytes()
-    struct.pack_into("<I3f", buf, t["slot_off"], t["batches"], step, 0.0, hi)
-    return q
+BACKSTOP_RANGE = 3  # index of the per-particle inward-limit channel in the constraint tables (ids 12/13/14)
+
+
+def particle_channel(buf, cs, r=BACKSTOP_RANGE):
+    """One quantised channel of a sim section's constraint tables.
+
+    id 12 = six batch counts (x16 entries each), id 14 = six (step, lo, hi) float triples, id 13 = the
+    bytes of all six ranges back to back; value = lo + byte * step. Ranges 0-2 are per-edge spring rest
+    lengths, range 3 is per particle (-17 cm ... +0.6 cm on the Canto cape, about 0 at the pinned top and
+    most negative at the hem: the inward limit / backstop offset along the skinned normal), range 5 is
+    the per-particle tether length.
+    -> dict(off = absolute offset of the channel's bytes, count = entries incl. padding, step, lo, hi)"""
+    d = typed(buf, cs)
+    counts = struct.unpack_from("<6I", buf, d[12][0][0])
+    assert d[14][0][1] == 72, d[14][0][1]
+    step, lo, hi = struct.unpack_from("<3f", buf, d[14][0][0] + r * 12)
+    po, size = d[13][0]
+    off = po + 16 * sum(counts[:r]); n = 16 * counts[r]
+    assert off + n <= po + size
+    return dict(off=off, count=n, step=step, lo=lo, hi=hi)
 
 
 if __name__ == "__main__":

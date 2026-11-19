@@ -36,7 +36,7 @@ tools/din_swap/build_all.sh                  # textures, meshes, materials, cape
 python3 tools/din_swap/deploy_din.py --redeploy   # revert the previous deploy, deploy staging
 python3 tools/din_swap/deploy_din.py --status     # compare game folder with staging
 python3 tools/din_swap/deploy_din.py --revert     # put the game folder back
-scripts/build_din_package.sh                 # release archive into <workspace>/dist/
+scripts/build_din_package.sh                 # release archive into <workspace>/dist/ (rebuilds cape + graphs with pinned settings)
 ```
 
 The game root defaults to a Steam library path; set `OMTK_GAME_ROOT` to override it. Fully quit and
@@ -49,8 +49,9 @@ relaunch the game to see a change.
 | Meshes | `build_din.py`: each model joint rides a fit group (torso, limbs, helmet …) with its own transform from model to game bind pose; skin weights are remapped to game bones; geometry is written into the vanilla containers' LOD0 with `mmbio.py` |
 | Textures | `build_textures.py`: single-level DDS carriers at mod-private paths |
 | Materials | `build_materials.py`: the Stormtrooper armour material copied over each piece's material, texture paths aliased (same byte length) to the carriers |
-| Cape | `build_cape.py`: the cape slot in the player's gear list points at the Canto Bight police cape; its cloth limits are raised in the `.mcloth`, its mesh is fitted around the neck plates, its material recoloured |
+| Cape | `build_cape.py`: the cape slot in the player's gear list points at the Canto Bight police cape; its cloth is un-stiffened in the `.mcloth` (friction and damping values only this cape has; `hero_cloth`), its mesh is fitted around the neck plates, its material recoloured |
 | Head | `build_cape.py`: the head entry is removed from the player's gear list (hides the bare head under the helmet, for the player only) |
+| Gear graphs | `build_graphs.py` (reader: `bv2g.py`), same-length connection edits: the ten worn Boba gear graphs take mesh visibility from gear input 151 (= not in first person, as Kay's own gear does); Kay's accessories graph is shipped again with its meshes off (the grapple rope attaches to its joints); the cape's cloth "follow" input is set to 0 |
 
 ## Format facts this relies on
 
@@ -62,12 +63,22 @@ Each is documented where it is implemented:
   A loose albedo is sampled as linear (store `(v/255)^2.2`).
 - **Normal maps** are A = X, G = Y (green up), R = copy of G, B = ambient occlusion.
 - **`.mcloth`** (`mcloth.py`): flat chunk stream; particles are the cloth sim mesh's vertices in order;
-  per-particle max distance is a quantised table, and the limit radius is repeated in each settings block.
+  the quantised per-particle table in ids 178-180 is the collision radius (not a leash), the backstop and
+  max-distance limits live in ids 12-14, and each settings block is a 149-byte struct plus a few chunks.
   The game reads a loose `.mcloth`; it does not read the sim mesh's vertex colours.
 - **Gear lists** (`character_visuals_*.mcharactervisuals`) are plain text. A part that is not listed is
   not built. A 0-byte `.mgraphobject` override also hides a part, but for every character that loads it.
+- **`.mgraphobject`** (`bv2g.py`): numbered entries with a trailing kind table; nodes, properties and the
+  connection list (`[src node][src pin][dst node][dst pin]`) can be read and re-pointed in place. Scalar
+  numbers in records are not IEEE floats (6-bit exponent, 25-bit mantissa; `bv2g.number`).
+- **Why a cape is stiff or free**: compare its `.mcloth` settings with a cape that behaves the way you
+  want before changing anything. The Canto police cape differed from the free capes only in two
+  friction-like values, its damping and the graph's follow input.
 
 ## Known gaps
 
-- The borrowed cape moves stiffly; its cloth settings are still being worked on.
-- Its mesh, material and cloth overrides sit on the Canto Bight police cape's own paths.
+- The cape is still drawn in first-person moments: its graph sits on the Canto Bight police cape's own
+  path, and the first-person edit could hide the cape on NPCs. A private copy of the graph is the next step.
+- The cape's mesh, material, cloth and graph overrides sit on the Canto Bight police cape's own paths, so
+  those NPCs get them too.
+- Only Kay's standard accessories graph is restored for the grapple rope; three outfit variants are not.

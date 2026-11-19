@@ -23,6 +23,19 @@ extracted/
 baseline/
 *.sdfdata
 *.mmb
+# game / model asset types: inputs and build outputs live in ../local and ../dist, never in git
+*.mcloth
+*.mmaterial
+*.mgraphobject
+*.mcharactervisuals
+*.dds
+*.tga
+*.gltf
+*.glb
+*.bin
+*.zip
+*.rar
+dist/
 
 # Logs / captures
 *.log

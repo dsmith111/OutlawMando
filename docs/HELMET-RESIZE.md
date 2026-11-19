@@ -14,12 +14,20 @@ whole DirectStorage/Oodle detour below was chasing the wrong loader. Working set
 Two follow-on fitment facts:
 - The player head clips through a shrunk helmet. The head (`chr_head_2_silver_human_sea_m_001`,
   a per-outfit head swapped in by the visuals file) **can't be shrunk** — its `head_mesh` uses
-  **PCA-compressed** positions. So it's **hidden** with a zero-byte `.mgraphobject` override
-  (the same trick the base mod uses for gear). Leaves a tiny throat gap, normally collar-covered.
+  **PCA-compressed** positions. So it's **hidden**. v1.2 did that with a zero-byte
+  `.mgraphobject` override, which turned out to be a bug (see below). Leaves a tiny throat gap,
+  normally collar-covered.
 - Final shipped shape is a non-uniform scale (narrower width, near-full height/depth) — a
   Mando-ish silhouette rather than a uniform shrink.
 
 ### v1.2 packaging fix: bald head/nose clipping
+
+> **Superseded — this fix caused invisible NPC heads.** `chr_head_2_silver_human_sea_m_001` is a
+> generic head that many NPCs load, so a 0-byte override of its graph removed their heads too.
+> Since 2.1 the head entry is removed from the player's gear list
+> (`character_visuals_player.mcharactervisuals`) instead, and the 0-byte file must not be
+> installed. Users updating from 1.2 or 2.0 have to delete it by hand. The text below is kept as
+> the record of what v1.2 did.
 
 The working game install contains this **zero-byte file**:
 `helix/graph objects/gear/chr_head_2_silver_human_sea_m_001.mgraphobject`.

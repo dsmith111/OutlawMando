@@ -47,13 +47,18 @@ LOD vertex data lives at `lod.data_offset`. `position_type 0` = 8-byte vertex
 `position_type 1` = `float3`. `tools/mmb_core.py` is a headless port of that parser;
 `tools/scale_helmet.py` uniformly scales a `.mmb` in place (same length).
 
-**Important caveat:** this `.mmb` format is what the **standalone extractor** produces. The
-game's *runtime* meshes inside the archives use a **different, compact, quantized format** — see
-[`HELMET-RESIZE.md`](HELMET-RESIZE.md). Loose `.mmb` overrides are **ignored** by the game.
+`mmb_core.py` misreads skinned meshes; the skinned layout (int16 positions + N × uint16 weights +
+N × uint8 bone indices) is implemented in `tools/din_swap/mmbio.py` and described in
+[`DIN-SWAP.md`](DIN-SWAP.md). Loose `.mmb` overrides, including resized ones, **are** loaded when
+the Raindrop loader is used (see [`HELMET-RESIZE.md`](HELMET-RESIZE.md)).
 
 ## Delivery / the modloader
 
 - Mods are loose-file overrides placed under the game's `helix/` tree. The Universal Snowdrop
   Modloader (`version.dll`) hooks `CreateFile`/`OpenFileStream` and serves them.
-- This works for **materials** but **not meshes/textures** in the default configuration —
-  those can stream through DirectStorage, which bypasses the file hook (see the helmet doc).
+- That works for **materials** but **not meshes/textures** — those can stream through
+  DirectStorage, which bypasses the file hook (see the helmet doc). **Raindrop** (`dinput8.dll`)
+  serves meshes, textures and cloth files too; the mod requires it.
+- An override replaces the file for **every** character that loads that path. To change one
+  character only, edit its gear list (`character_visuals_*.mcharactervisuals`, plain text) or use
+  mod-private paths (e.g. texture carriers aliased with `tools/alias_string.py`).

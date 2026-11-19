@@ -1,75 +1,53 @@
-# OutlawMando — Mandalorian Beskar recolor + a Snowdrop/DirectStorage mod toolkit
+# OutlawMando — Mandalorian Beskar for Star Wars Outlaws, plus a Snowdrop modding toolkit
 
-Turns the Boba Fett gear in **Star Wars Outlaws** (Snowdrop engine) into clean,
-screen-accurate **Mandalorian beskar** — cool silver armor instead of Boba's dark weathered
-green/red metal — and, along the way, a reusable toolkit for reverse-engineering and modding
-Snowdrop's file formats on Linux.
+An add-on for the **"Play as Boba Fett"** mod for **Star Wars Outlaws** (Snowdrop engine) that turns
+the outfit into Din Djarin, and the Linux-side toolkit built to make it.
 
-> **Status:** The color mod is finished and shippable (see [`mod-src/`](mod-src/) and the
-> `nexus/` bundles). The **helmet resize also works** — via the Raindrop loader, which serves
-> loose `.mmb` mesh overrides (the earlier DirectStorage detour was chasing the wrong loader).
-> The full story, including the genuinely novel DirectStorage-intercept capability that came
-> out of it, is in [`docs/HELMET-RESIZE.md`](docs/HELMET-RESIZE.md).
+- **v2.x (current):** a full Din Djarin character model replaces the Boba Fett geometry. The model
+  is cut into the outfit's gear pieces, refitted to the game skeleton, re-skinned and re-textured,
+  and given a cloth-simulated back cape. See [`docs/DIN-SWAP.md`](docs/DIN-SWAP.md) and
+  [`tools/din_swap/`](tools/din_swap/).
+- **v1.x (older):** a material reskin of the Boba outfit (chrome beskar plus a reshaped helmet).
+  The record is in [`docs/HELMET-RESIZE.md`](docs/HELMET-RESIZE.md) and [`docs/FINDINGS.md`](docs/FINDINGS.md).
+
+No game files, model files or packaged builds are in this repo. The tools read them from a
+private workspace folder next to the repo (see [`docs/DIN-SWAP.md`](docs/DIN-SWAP.md)).
 
 ## What's here
 
 | Path | What it is |
 |------|------------|
-| [`mod-src/`](mod-src/) | The beskar recolor — final `.mmaterial` overrides (main + two optional tones) and how they were made |
-| [`tools/`](tools/) | Python tools to parse/edit Snowdrop formats natively on Linux (no Windows GUI extractor needed) |
-| [`loader/`](loader/) | A `dstorage.dll` proxy that **re-enables and intercepts DirectStorage** — experimental research, not shipped |
-| [`docs/`](docs/) | The reverse-engineering write-ups (formats, the DirectStorage discovery, the helmet dead-end) |
-| [`scripts/`](scripts/) | Dev deploy/restore helpers (example paths — edit for your install) |
+| [`tools/din_swap/`](tools/din_swap/) | The v2 pipeline: model → game meshes, textures, materials, borrowed cloth cape; deploy/revert; validation |
+| [`tools/`](tools/) | Format tools: `bv2.py` (`.mmaterial`/`.mgraphobject` containers), `matconst.py` (material constants), `alias_string.py` (same-length texture path aliasing), `mmb_core.py` (`.mmb` meshes), `berg.py`/`find_assets.py` (`.sdfdata` archives), `force_lod0.py`, `scale_helmet.py` and others |
+| [`scripts/build_din_package.sh`](scripts/build_din_package.sh) | Builds and checks the release archive |
+| [`loader/`](loader/) | A `dstorage.dll` proxy that re-enables and intercepts DirectStorage. Research only, not used by the mod |
+| [`docs/`](docs/) | Reverse-engineering notes |
 
-The packaged, upload-ready mod archives live in `../nexus/` (outside this repo); proprietary
-binaries and ripped game assets live in `../local/` and are intentionally **not** committed.
+## Requirements to play
 
-## The mod (short version)
+- Star Wars Outlaws (PC).
+- **Raindrop** (DTZxPorter's `dinput8.dll` loader). It is the loader that serves loose meshes,
+  textures and cloth files. The `version.dll` "Universal Snowdrop Modloader" does not.
+- "Play as Boba Fett" and its requirements ("Hide Kay's Accessories", "Hide Kay's Clothes").
 
-The metal armor pieces use a layered Snowdrop material. Boba's look comes from a paint layer
-(green/red/orange) over a bare metal base plus baked rust/dirt. The recolor:
+The release archive is `helix/` plus `README.txt`; install it over the Boba mod.
 
-- neutralizes the paint-layer colors and the rust/dirt/stain *colors* to a cool silver,
-- lifts the dark base tint (`L1 Color Overlay`) to a bright cool-silver,
-- leaves cloth/leather pieces untouched.
+## Lessons that cost a release
 
-All edits are **same-length, in-place float edits** to the material constants — the only kind
-that is safe (changing a material file's byte length crashes the game on character load, and
-enabling the paint layer or editing weathering *scalars* also crashes). Base roughness/metalness
-aren't stored as editable constants, so a true mirror shine isn't reachable via constants — the
-result is a clean, cool gunmetal-silver, matte-metallic under reflective light.
-
-Three tones are provided: **main** (cool silver), **gunmetal** (deeper/contrasty), **steel**
-(lighter). See [`mod-src/README.md`](mod-src/README.md).
-
-## Requirements / install
-
-- **Star Wars Outlaws** (PC).
-- The **Universal Snowdrop Modloader** (`version.dll`).
-- The base **"Play as Boba Fett"** mod (this is a *recolor add-on* — it overrides that mod's
-  material files; it does not add the Boba appearance itself).
-
-Install with a mod manager, or drop the bundle's `helix/` folder into the game root so the
-files land at `…/Star Wars Outlaws/helix/materials/`. See each bundle's `README.txt`.
-
-## The toolkit
-
-Everything needed to inspect and edit Snowdrop `.mmaterial` files was reverse-engineered and
-reimplemented in Python (see [`docs/FINDINGS.md`](docs/FINDINGS.md)):
-
-- `tools/bv2.py` — parse/rebuild `\xffBV2` containers (`.mmaterial`, `.mgraphobject`) byte-exact.
-- `tools/matconst.py` — read/write named material constants (colors, roughness, etc.).
-- `tools/make_tone.py` — generate a beskar tone variant from vanilla materials (proven-safe edits only).
-- `tools/berg.py`, `tools/find_assets.py` — walk the `BERG` `.sdfdata` archives and locate assets.
-- `tools/mmb_core.py`, `tools/scale_helmet.py` — parse/scale `.mmb` skeletal meshes (see the helmet doc).
+- **An override on a vanilla path changes every character that loads that path.** v1.2 and v2.0
+  hid the player's bare head with a 0-byte override of a generic head graph
+  (`chr_head_2_silver_human_sea_m_001.mgraphobject`), and many NPCs lost their heads. Since 2.1 the
+  head entry is removed from the player's own gear list (`character_visuals_player.mcharactervisuals`,
+  plain text) instead. To hide or change a part of one character, edit that character's gear list.
+- The borrowed cape still overrides the Canto Bight police cape's own files, so those NPCs share its
+  colour and cloth settings.
 
 ## License
 
-MIT for the original code here (tools, loader). Third-party/other:
+MIT for the original code here (tools, loader). Third-party:
 - `loader/sdk/dstorage.h`, `dstorageerr.h` are Microsoft's DirectStorage headers (MIT).
-- The `ooz` Oodle *decompressor* (used during research) and Oodle itself (`oo2core_*.dll`,
-  needed for *re-encoding*) are **not included** and are not MIT — obtain them separately.
-- `.mmaterial` files are derived from Star Wars Outlaws assets (Ubisoft). Provided for
-  interoperability/modding; all game IP belongs to Ubisoft.
+- Oodle (`oo2core_*.dll`) and game binaries are not included and are not MIT.
+- Star Wars Outlaws assets belong to Ubisoft; Star Wars / The Mandalorian are © Lucasfilm/Disney.
+  None are included. The tools operate on files you export from your own copy of the game.
 
 See [`LICENSE`](LICENSE).
